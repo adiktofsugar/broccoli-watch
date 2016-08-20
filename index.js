@@ -12,7 +12,7 @@ if (!outputDir) {
     process.exit(1);
 }
 
-var projectRoot = path.resolve(__dirname);
+var projectRoot = process.cwd();
 outputDir = path.join(projectRoot, outputDir);
 console.log("writing to " + outputDir);
 
