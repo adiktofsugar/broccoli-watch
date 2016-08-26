@@ -1,8 +1,7 @@
 #!/usr/bin/env node
+var fs = require('fs-extra');
 var path = require('path');
 var broccoli = require('broccoli');
-var copyDereferenceSync = require('copy-dereference').sync;
-var rimrafSync = require('rimraf').sync;
 var RSVP = require('rsvp')
 
 var args = process.argv.slice(2);
@@ -40,63 +39,16 @@ function logBuildError(error) {
     console.error('Build failed')
 }
 
-function build() {
-    return new RSVP.Promise(function (resolve, reject) {
-        builder.cleanup()
-        .then(function () {
-            return builder.build();
-        })
-        .then(function (hash) {
-            rimrafSync(outputDir);
-            copyDereferenceSync(hash.directory, outputDir);
-        })
-        .then(function () {
-            console.log("built to", outputDir);
-            resolve();
-        })
-        .catch(function (error) {
-            logBuildError(error);
-            resolve();
-        });
-    });
-}
-
-function createWatcher() {
-    var isCleaning = false;
-    new broccoli.Watcher(builder, {
-        verbose: false
-    })
-    .on('change', function (hash) {
-        if (isCleaning) {
-            console.log("Can't update. Cleaning.");
-            return;
-        }
-        rimrafSync(outputDir);
-        copyDereferenceSync(hash.directory, outputDir);
-    })
-    .on('error', function (error) {
-        logBuildError(error);
-        isCleaning = true;
-        builder.cleanup()
-            .then(function () {
-                isCleaning = false;
-                console.log('Cleaned tmp tree');
-            })
-            .catch(function () {
-                isCleaning = false;
-                console.error('Failed to clean');
-            });
-    });
-}
 function watch() {
     return new RSVP.Promise(function(resolve, reject) {
         new broccoli.Watcher(builder, {
             verbose: false
         })
         .on('change', function (hash) {
-            console.log("changed");
-            rimrafSync(outputDir);
-            copyDereferenceSync(hash.directory, outputDir);
+            fs.copySync(hash.directory, outputDir, {
+                clobber: true,
+                dereference: true
+            });
             console.log("rebuilt");
         })
         .on('error', function (error) {
@@ -110,8 +62,9 @@ function watch() {
 }
 
 function start() {
-    build()
-    .then(watch)
+    // build()
+    // .then(watch)
+    watch()
     .catch(function (error) {
         console.error("==== EPIC FAILURE ===");
         console.error(error);
